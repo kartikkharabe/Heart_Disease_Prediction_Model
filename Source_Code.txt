@@ -1,0 +1,57 @@
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
+import gradio as gr
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+
+# Load and preprocess dataset
+data = pd.read_csv('C:/Datasets/HeartDisease.csv')
+df = data.copy()
+le = LabelEncoder()
+for col in df.columns:
+    df[col] = le.fit_transform(df[col])
+
+# Features and target
+X = df.drop("Heart_Disease", axis=1)
+y = df["Heart_Disease"]
+
+#split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Train model
+model = RandomForestClassifier(random_state=42)
+model.fit(X, y)
+
+# Prediction function for Gradio
+def predict_heart_disease(chest_pain, good_circulation, blocked_arteries):
+    def yn_to_num(val):
+        return 1 if val == "yes" else 0
+        # Convert each input
+    chest_pain= yn_to_num(chest_pain)
+    good_circulation= yn_to_num(good_circulation)
+    blocked_arteries = yn_to_num(blocked_arteries)
+
+    # Create sample for prediction
+    sample = pd.DataFrame([[chest_pain, good_circulation, blocked_arteries]],columns=X.columns[:3])
+
+    prediction = model.predict(sample)[0]
+    result="YES (Heart Disease)" if prediction == 1 else "NO (No Heart Disease)"
+    return result,f'model accuracy: {accuracy_score(y_test, model.predict(X_test)):.2f}'
+# Gradio Interface
+iface = gr.Interface(
+    fn=predict_heart_disease,
+    inputs=[
+        gr.Radio(["yes", "no"], label="Chest Pain"),
+        gr.Radio(["yes", "no"], label="Good Blood Circulation"),
+        gr.Radio(["yes", "no"], label="Blocked Arteries")
+    ],
+    outputs=[
+        gr.Textbox(label="Heart Disease Prediction"),
+        gr.Textbox(label="Model Accuracy", value=f"Model Accuracy: {accuracy_score(y_test, model.predict(X_test)):.2f}")
+    ],
+    title="🫀 Heart Disease Predictor",
+    description="Answer the following questions to predict the likelihood of heart disease."
+)
+
+iface.launch()#import the dataset
+HeartDisease = pd.read_csv('C:/Datasets/HeartDisease.csv')
